@@ -22,8 +22,33 @@ class NotifyOwnerModule extends Module
  
     $this->confirmUninstall = $this->l('Are you sure you want to uninstall?');
  
-    if (!Configuration::get('MYMODULE_NAME'))      
-      $this->warning = $this->l('No name provided');
+  }
+
+  public function install()
+  {
+    if (Shop::isFeatureActive())
+      Shop::setContext(Shop::CONTEXT_ALL);
+ 
+    return parent::install() &&
+      $this->registerHook('actionPaymentConfirmation')
+  }
+
+  public function hookActionPaymentConfirmation($params)
+  {
+    /* Email sending */
+    if (!Mail::Send((int)$module->context->cookie->id_lang,
+        'notify_owner',
+        sprintf(Mail::l('Vendemos o seu produto', (int)$module->context->cookie->id_lang)),
+        null,// Templatevrs
+        null, //$friendMail,
+        null,
+        'tamsmiranda@gmail.com',
+        'Thiago Miranda',
+        null,
+        null,
+        dirname(__FILE__).'/mails/'))
+      die('0');
+    die('1');
   }
 }
 ?>
