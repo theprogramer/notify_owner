@@ -3,7 +3,7 @@
 if (!defined('_PS_VERSION_'))
   exit;
  
-class OwnerNotifyModule extends Module
+class NotifyOwnerModule extends Module
 {
   public function __construct()
   {
