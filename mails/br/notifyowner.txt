@@ -1,0 +1,4 @@
+Olá {name},
+
+Estamos aqui apenas para te avisar que vendemos o seu produto: {product}, por R${product_price}.
+Veja os detalhes do seu produto aqui: {product_url}.

@@ -29,29 +29,22 @@ class NotifyOwner extends Module
 
   public function install()
   {
-
-    $myfile = fopen("/home/breshop/public_html/prestashop/modules/notifyowner/install.txt", "w") or die("Unable to open file!");
-    $txt = "John Doe\n";
-    fwrite($myfile, $txt);
-    $txt = "Jane Doe\n";
-    fwrite($myfile, $txt);
-    fclose($myfile);
-
     return parent::install()
            && $this->registerHook('actionOrderStatusUpdate')
-           && $this->registerHook('actionOrderStatusPostUpdate')
-           // Old Hooks
-           && $this->registerHook('updateOrderStatus')
-           && $this->registerHook('postUpdateOrderStatus');
-
+           && $this->registerHook('actionOrderStatusPostUpdate');
   }
 
   public function hookActionOrderStatusUpdate($params)
   {
-    $this->sendNotification($params);
     if (!($params['newOrderStatus']->id == Configuration::get('PS_OS_WS_PAYMENT')) && 
-        !($params['newOrderStatus']->id == Configuration::get('PS_OS_PAYMENT'))) return ;
-    $this->sendNotification($params);
+        !($params['newOrderStatus']->id == Configuration::get('PS_OS_WS_PAYMENT')) &&
+        !($params['newOrderStatus']->id == Configuration::get('MoIP_STATUS_0')) &&
+        !($params['newOrderStatus']->id == Configuration::get('MoIP_STATUS_3'))) return ;
+    $order = new Order($params['id_order']);
+    $products = $params['cart']->getProducts(true);
+    foreach ($products as $cartProduct) {
+      $this->sendNotification($cartProduct['id_product']);
+    }
   }
 
   public function hookActionOrderStatusPostUpdate($params)
@@ -59,30 +52,32 @@ class NotifyOwner extends Module
     $this->hookActionOrderStatusUpdate($params);
   }
 
-  public function hookUpdateOrderStatus($params)
-  {
-    $this->hookActionOrderStatusUpdate($params);
-  }
-
-  public function hookPostUpdateOrderStatus($params)
-  {
-    $this->hookActionOrderStatusUpdate($params);
-  }
-
-  private function sendNotification($params) {
-
-    /* Email sending */
-    if (! Mail::Send((int)(Configuration::get('PS_LANG_DEFAULT')), // defaut language id
-        'contact', // email template file to be use
-        $this->displayName.' Vendemos!', // email subject
-        array(
-          '{email}' => Configuration::get('PS_SHOP_EMAIL'), // sender email address
-          '{message}' => $this->displayName.' has been installed on:'._PS_BASE_URL_.__PS_BASE_URI__ // email content
-        ), 
-        'tamsmiranda@gmail.com', // receiver email address 
-        NULL, NULL, NULL))
-      die('0');
-    //die('1');
+  private function sendNotification($productId) {
+    $product = new Product($productId);
+    $link = new Link();
+    $url = $link->getProductLink($product);
+    // Send email
+    if (Validate::isLoadedObject($product)) {
+      if (! Mail::Send((int)(Configuration::get('PS_LANG_DEFAULT')), // defaut language id
+          'notifyowner', // email template file to be use
+          'Vendemos seu enjoo!', // email subject
+          array(
+            '{name}' => $product->owner_name, // Owner name
+            '{product}' => $product->name[1], // Owner name
+            '{product_url}' => $url,
+            '{product_price}' => sprintf("%01.2f", $product->price)
+          ), 
+          $product->owner_email, // receiver email address 
+          $product->owner_name, // receiver name
+          NULL, // from
+          NULL, // from name
+          NULL, // attachment
+          NULL, // SMTP
+          dirname(__FILE__).'/mails/'
+          )
+        )
+        die('0');
+    }
   }
 
 
